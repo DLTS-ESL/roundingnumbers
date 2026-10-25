@@ -1,0 +1,406 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rounding Numbers Test</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: auto;
+    background: white;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 5px 20px #00000012;
+  }
+
+  h1 { text-align: center; color: #1d4ed8; }
+  .subtitle { text-align: center; color: #64748b; }
+
+  .student-info {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  label { font-weight: bold; }
+
+  input, select {
+    width: 100%;
+    padding: 11px;
+    margin-top: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  .question-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .question {
+    border: 1px solid #dbeafe;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+    min-width: 0;
+  }
+
+  .question h3 { margin: 0 0 12px; font-size: 15px; }
+  .problem { font-size: 20px; font-weight: bold; margin: 12px 0; }
+  .question input { text-align: center; }
+
+  .correct { background: #dcfce7; border-color: #22c55e; }
+  .incorrect { background: #fee2e2; border-color: #ef4444; }
+
+  .feedback { font-size: 13px; margin-top: 8px; min-height: 30px; }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 28px 0 12px;
+  }
+
+  button {
+    padding: 13px 22px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .submit { background: #2563eb; color: white; }
+  .new-test { background: #e2e8f0; color: #1e293b; }
+  .print { background: #0f766e; color: white; }
+
+  button:hover { opacity: .88; }
+
+  #results {
+    display: none;
+    margin-top: 24px;
+    padding: 20px;
+    background: #eff6ff;
+    border-radius: 12px;
+  }
+
+  #results h2 { color: #1d4ed8; }
+  .record {
+    padding: 12px 0;
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .history { margin-top: 30px; }
+  .history h2 { font-size: 20px; }
+
+  .history-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 10px 0;
+  }
+
+  @media (max-width: 700px) {
+    body { padding: 10px; }
+    .container { padding: 16px; }
+    .question-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .student-info { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .container { box-shadow: none; }
+    .actions, .student-info select, #name { display: none; }
+    .question-grid { grid-template-columns: repeat(5, 1fr); }
+    .question { break-inside: avoid; }
+    #results { display: block !important; }
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Rounding Numbers Test</h1>
+  <p class="subtitle">Read each question carefully and enter your answer.</p>
+
+  <div class="student-info">
+    <div>
+      <label for="name">Student Name</label>
+      <input id="name" type="text" placeholder="Enter your full name">
+    </div>
+    <div>
+      <label for="level">Rounding Practice</label>
+      <select id="level">
+        <option value="mixed">Mixed Practice</option>
+        <option value="10">Nearest 10</option>
+        <option value="100">Nearest 100</option>
+        <option value="1000">Nearest 1,000</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="questions" class="question-grid"></div>
+
+  <div class="actions">
+    <button class="submit" onclick="submitTest()">Submit Answers</button>
+    <button class="new-test" onclick="newTest()">New Round</button>
+    <button class="print" onclick="window.print()">Print Results</button>
+  </div>
+
+  <div id="results">
+    <h2>Test Results</h2>
+    <div id="resultContent"></div>
+  </div>
+
+  <div class="history">
+    <h2>Submission History</h2>
+    <p>Submitted rounds are recorded here during this browser session.</p>
+    <div id="historyList">No submissions yet.</div>
+  </div>
+</div>
+
+<script>
+const TOTAL = 15;
+let problems = [];
+let submitted = false;
+let history = [];
+
+function roundNumber(number, place) {
+  return Math.floor(number / place + 0.5) * place;
+}
+
+function randomNumber(place) {
+  if (place === 10) return Math.floor(Math.random() * 990) + 10;
+  if (place === 100) return Math.floor(Math.random() * 9900) + 100;
+  return Math.floor(Math.random() * 99000) + 1000;
+}
+
+function generateProblems() {
+  const level = document.getElementById("level").value;
+  const places = level === "mixed"
+    ? [10, 100, 1000]
+    : [Number(level)];
+
+  problems = [];
+
+  for (let i = 0; i < TOTAL; i++) {
+    const place = places[i % places.length];
+    const number = randomNumber(place);
+
+    problems.push({
+      number,
+      place,
+      answer: roundNumber(number, place)
+    });
+  }
+
+  // Shuffle the question order.
+  problems.sort(() => Math.random() - 0.5);
+}
+
+function renderQuestions() {
+  const grid = document.getElementById("questions");
+  grid.innerHTML = "";
+
+  problems.forEach((q, i) => {
+    const card = document.createElement("div");
+    card.className = "question";
+    card.id = "card-" + i;
+
+    card.innerHTML = `
+      <h3>Question ${i + 1}</h3>
+      <div>Round to nearest ${q.place.toLocaleString()}</div>
+      <div class="problem">${q.number.toLocaleString()}</div>
+      <label for="answer-${i}">Your answer</label>
+      <input id="answer-${i}" type="number"
+        step="1" placeholder="Answer"
+        aria-label="Answer to question ${i + 1}">
+      <div class="feedback" id="feedback-${i}"></div>
+    `;
+
+    grid.appendChild(card);
+  });
+
+  document.getElementById("results").style.display = "none";
+  submitted = false;
+}
+
+function newTest() {
+  generateProblems();
+  renderQuestions();
+  document.getElementById("resultContent").innerHTML = "";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function submitTest() {
+  if (submitted) {
+    alert("This round has already been submitted. Select New Round to try again.");
+    return;
+  }
+
+  const name = document.getElementById("name").value.trim();
+
+  if (!name) {
+    alert("Please enter the student's name before submitting.");
+    document.getElementById("name").focus();
+    return;
+  }
+
+  let score = 0;
+  let unanswered = 0;
+
+  problems.forEach((q, i) => {
+    const field = document.getElementById("answer-" + i);
+    const card = document.getElementById("card-" + i);
+    const feedback = document.getElementById("feedback-" + i);
+    const raw = field.value.trim();
+    const correct = raw !== "" && Number(raw) === q.answer;
+
+    card.classList.remove("correct", "incorrect");
+
+    if (raw === "") unanswered++;
+
+    if (correct) {
+      score++;
+      card.classList.add("correct");
+      feedback.textContent = "Correct!";
+    } else {
+      card.classList.add("incorrect");
+      feedback.textContent = raw === ""
+        ? "No answer. Correct: " + q.answer.toLocaleString()
+        : "Correct answer: " + q.answer.toLocaleString();
+    }
+
+    field.disabled = true;
+  });
+
+  submitted = true;
+
+  const now = new Date();
+  const timestamp = now.toLocaleString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+
+  const record = {
+    name,
+    score,
+    total: TOTAL,
+    timestamp,
+    details: problems.map((q, i) => ({
+      number: q.number,
+      place: q.place,
+      answer: q.answer,
+      response: document.getElementById("answer-" + i).value
+    }))
+  };
+
+  history.unshift(record);
+
+  document.getElementById("results").style.display = "block";
+  document.getElementById("resultContent").innerHTML = `
+    <div class="record"><strong>Student:</strong> ${escapeHTML(name)}</div>
+    <div class="record"><strong>Score:</strong> ${score} / ${TOTAL}
+      (${Math.round(score / TOTAL * 100)}%)</div>
+    <div class="record"><strong>Submitted:</strong> ${timestamp}</div>
+    <div class="record"><strong>Unanswered:</strong> ${unanswered}</div>
+    <p>${score === TOTAL ? "Excellent work! All answers are correct!"
+      : "Review the corrections above and try another round."}</p>
+  `;
+
+  renderHistory();
+  document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+}
+
+function escapeHTML(value) {
+  return value.replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+function renderHistory() {
+  const list = document.getElementById("historyList");
+
+  list.innerHTML = history.map((r, i) => `
+    <div class="history-item">
+      <strong>Round ${history.length - i} — ${escapeHTML(r.name)}</strong><br>
+      Score: ${r.score}/${r.total} (${Math.round(r.score / r.total * 100)}%)<br>
+      Submitted: ${r.timestamp}
+      <br><button class="new-test" onclick="printRecord(${i})">
+        Print This Record
+      </button>
+    </div>
+  `).join("");
+}
+
+function printRecord(index) {
+  const r = history[index];
+  const win = window.open("", "_blank");
+
+  if (!win) {
+    alert("Please allow pop-ups to print an individual record.");
+    return;
+  }
+
+  const rows = r.details.map((q, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${q.number.toLocaleString()}</td>
+      <td>${q.place.toLocaleString()}</td>
+      <td>${escapeHTML(q.response || "No answer")}</td>
+      <td>${q.answer.toLocaleString()}</td>
+    </tr>
+  `).join("");
+
+  win.document.write(`
+    <!DOCTYPE html><html><head><title>Rounding Test Record</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:30px}
+      table{border-collapse:collapse;width:100%}
+      th,td{border:1px solid #999;padding:8px;text-align:left}
+    </style></head><body>
+    <h1>Rounding Numbers Test</h1>
+    <p>Student: ${escapeHTML(r.name)}</p>
+    <p>Score: ${r.score}/${r.total}
+      (${Math.round(r.score / r.total * 100)}%)</p>
+    <p>Submitted: ${r.timestamp}</p>
+    <table><thead><tr><th>#</th><th>Number</th>
+    <th>Nearest</th><th>Student Answer</th><th>Correct Answer</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <script>window.onload=()=>window.print();<\/script>
+    </body></html>
+  `);
+  win.document.close();
+}
+
+document.getElementById("level").addEventListener("change", newTest);
+newTest();
+</script>
+</body>
+</html>
